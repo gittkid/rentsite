@@ -19,6 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем код приложения
 COPY . .
 
+# Создаем директории для логов и загрузок
+RUN mkdir -p logs uploads
+
 # Создаем пользователя для безопасности
 RUN useradd -m -u 1000 apprentuser && chown -R apprentuser:apprentuser /app
 USER apprentuser
@@ -27,8 +30,9 @@ USER apprentuser
 EXPOSE 5000
 
 # Переменные окружения
-ENV FLASK_APP=run.py
+ENV FLASK_APP=wsgi.py
 ENV FLASK_ENV=production
+ENV PYTHONPATH=/app
 
 # Команда запуска
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "run:app"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "wsgi:app"] 

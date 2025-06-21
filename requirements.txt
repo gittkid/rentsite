@@ -33,3 +33,9 @@ flake8==7.3.0
 
 # Продакшн
 gunicorn==21.2.0
+
+# Дополнительные зависимости для продакшена
+Flask-Limiter==3.5.0
+Flask-Talisman==1.1.0
+Flask-Compress==1.14
+Werkzeug==3.0.1

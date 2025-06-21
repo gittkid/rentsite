@@ -36,6 +36,11 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     CORS(app)
     
+    # Настройка логирования
+    if config_name == 'production':
+        from app.logging_config import setup_logging
+        setup_logging(app)
+    
     # Регистрация blueprints
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)
@@ -50,6 +55,17 @@ def create_app(config_name=None):
         Order, OrderItem, OrderNotification, Delivery,
         DeliveryZone, DeliverySchedule
     )
+    
+    # Обработчики ошибок
+    @app.errorhandler(404)
+    def not_found_error(error):
+        return {'error': 'Not found'}, 404
+    
+    @app.errorhandler(500)
+    def internal_error(error):
+        db.session.rollback()
+        app.logger.error(f'Internal server error: {error}')
+        return {'error': 'Internal server error'}, 500
     
     # Создание контекста приложения только для разработки
     if config_name == 'development':

@@ -7,11 +7,17 @@ from datetime import timedelta
 
 class Config:
     """Базовая конфигурация"""
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'AK2YSTRT-S2C_RANDMOSMONDNIDN-H&FUHJ*HGF656464GI-KEYSTP'
+    # КРИТИЧНО: Убираем хардкод секретных ключей
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    if not SECRET_KEY:
+        raise ValueError("SECRET_KEY environment variable is required")
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
         'pool_recycle': 300,
+        'pool_size': 10,
+        'max_overflow': 20,
     }
     
     # Настройки Telegram
@@ -23,7 +29,9 @@ class Config:
     REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
     
     # Настройки JWT
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'K2YSTRT-S2C_RANDMOBVKVT876875-H&FUHF656464GI-KEYSTP'
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
+    if not JWT_SECRET_KEY:
+        raise ValueError("JWT_SECRET_KEY environment variable is required")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
     
     # Настройки загрузки файлов
@@ -43,6 +51,12 @@ class Config:
     
     # Логирование
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+    
+    # Безопасность
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
 
 class DevelopmentConfig(Config):
     """Конфигурация для разработки"""
@@ -55,6 +69,9 @@ class DevelopmentConfig(Config):
     
     # Настройки для разработки
     TELEGRAM_WEBHOOK_URL = None  # Отключаем webhook в разработке
+    
+    # Отключаем безопасные куки в разработке
+    SESSION_COOKIE_SECURE = False
 
 class ProductionConfig(Config):
     """Конфигурация для продакшена"""
@@ -64,14 +81,22 @@ class ProductionConfig(Config):
     # Логирование
     LOG_LEVEL = 'INFO'
     
-    # Безопасность
-    SESSION_COOKIE_SECURE = True
-    SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
-    
     # Настройки для продакшена
     if not SQLALCHEMY_DATABASE_URI:
         raise ValueError("DATABASE_URL environment variable is required for production")
+    
+    # Дополнительные настройки безопасности для продакшена
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Strict'
+    
+    # Настройки для продакшена
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 3600,
+        'pool_size': 20,
+        'max_overflow': 30,
+    }
 
 class TestingConfig(Config):
     """Конфигурация для тестирования"""
@@ -85,6 +110,9 @@ class TestingConfig(Config):
     # Настройки для тестирования
     TELEGRAM_BOT_TOKEN = 'test_token'
     TELEGRAM_WEBHOOK_URL = None
+    
+    # Отключаем безопасные куки в тестах
+    SESSION_COOKIE_SECURE = False
 
 # Словарь конфигураций
 config = {
