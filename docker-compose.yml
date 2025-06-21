@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # База данных PostgreSQL
+  postgres:
+    image: postgres:15
+    container_name: makita_postgres
+    environment:
+      POSTGRES_DB: rentdatadb
+      POSTGRES_USER: rentuser
+      POSTGRES_PASSWORD: R2ntS2c
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - makita_network
+
+  # Redis для кэширования
+  redis:
+    image: redis:7-alpine
+    container_name: makita_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - makita_network
+
+  # Flask приложение
+  web:
+    build: .
+    container_name: makita_web
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://rentuser:R2ntS2c@postgres:5432/rentdatadb
+      - REDIS_URL=redis://redis:6379/0
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_WEBHOOK_URL=${TELEGRAM_WEBHOOK_URL}
+      - CHAT_ID=${CHAT_ID}
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - ITEMS_PER_PAGE=${ITEMS_PER_PAGE}
+      - MAX_CART_ITEMS=${MAX_CART_ITEMS}
+      - MAX_RENTAL_DAYS=${MAX_RENTAL_DAYS}
+      - DEFAULT_DELIVERY_FEE=${DEFAULT_DELIVERY_FEE}
+      - MIN_ORDER_AMOUNT_FOR_FREE_DELIVERY=${MIN_ORDER_AMOUNT_FOR_FREE_DELIVERY}
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./uploads:/app/app/static/uploads
+    networks:
+      - makita_network
+    restart: unless-stopped
+
+  # Nginx для reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: makita_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - web
+    networks:
+      - makita_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  makita_network:
+    driver: bridge 
